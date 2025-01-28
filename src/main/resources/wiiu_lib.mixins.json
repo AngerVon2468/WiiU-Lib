@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "wiiu.mavity.wiiu_lib.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "wiiu_lib.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
