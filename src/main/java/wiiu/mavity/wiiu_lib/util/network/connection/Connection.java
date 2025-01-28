@@ -13,16 +13,16 @@ public class Connection implements AutoCloseable {
 
     protected final ObjectHolder<HttpURLConnection> connection = new ObjectHolder<>();
     protected final ObjectHolder<String> response = new ObjectHolder<>();
-    private final URL url;
-    private final Map<String, String> requestProperties;
-    private final boolean
+    protected final URL url;
+	protected final Map<String, String> requestProperties;
+	protected final boolean
             doOutput,
             mustHaveResponse,
             useCaches;
-    private boolean open = false;
-    private final Charset responseCharset;
-    private final List<HttpResponseCode> acceptableResponseCodes;
-    private final RequestMethod requestMethod;
+    protected boolean open = false;
+	protected final Charset responseCharset;
+	protected final List<HttpResponseCode> acceptableResponseCodes;
+	protected final RequestMethod requestMethod;
 
     protected Connection(
             URL url,
@@ -121,7 +121,7 @@ public class Connection implements AutoCloseable {
                 connection.setDoOutput(this.getDoOutput());
                 connection.setUseCaches(this.getUseCaches());
             } catch (Exception e) {
-                throw new NetworkException(this.url, e);
+                throw new NetworkException(this.getUrl(), e);
             }
         });
     }

@@ -145,6 +145,15 @@ public class ObjectHolder<V> implements ObjectHolderLike<V> {
 	}
 
 	/**
+	 * Casts the value contained in this holder to the type specified in the parameters, DO NOT USE IF YOU ARE NOT CERTAIN THE CAST IS SAFE.
+	 * @param clazz Class to cast this holder's value to.
+	 * @return The value contained in this holder cast as the type specified in the parameters, or null if the value is null.
+	 */
+	public <O> @Nullable O cast(Class<O> clazz) {
+		return this.isPresent() ? clazz.cast(this.get()) : null;
+	}
+
+	/**
 	 * @return If the value contained in this holder is present (is not null).
 	 */
     public boolean isPresent() {
