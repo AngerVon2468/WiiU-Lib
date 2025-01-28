@@ -8,18 +8,9 @@ public class PersistentClientConnection extends PersistentConnection {
 
 	protected final String targetIp;
 
-	public PersistentClientConnection(URL url, int port) {
-		super(url, port);
-		try {
-			this.targetIp = InetAddress.getByName(this.getUrl().getHost()).getHostAddress();
-		} catch (Exception e) {
-			throw new NetworkException(this.getUrl(), e);
-		}
-	}
-
-	public PersistentClientConnection(String ip, int port) {
-		super(port);
-		this.targetIp = ip;
+	public PersistentClientConnection(PersistentConnectionBuilder builder) {
+		super(builder);
+		this.targetIp = builder.targetIp;
 	}
 
 	public String getTargetIp() {

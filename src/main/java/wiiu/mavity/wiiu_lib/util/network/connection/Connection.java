@@ -200,15 +200,15 @@ public class Connection implements AutoCloseable {
 
     public static class ConnectionBuilder {
 
-        private URL url = NetworkUtil.url("https://www.example.com");
-        private final Map<String, String> requestProperties = new HashMap<>();
-        private boolean
+		protected URL url = NetworkUtil.url("https://www.example.com");
+		protected final Map<String, String> requestProperties = new HashMap<>();
+		protected boolean
                 doOutput = false,
                 mustHaveResponse = false,
                 useCaches = true;
-        private Charset responseCharset = Charset.defaultCharset();
-        private final List<HttpResponseCode> acceptableResponseCodes = new ArrayList<>(List.of(HttpResponseCode.HTTP_OK));
-        private RequestMethod requestMethod = RequestMethod.GET;
+		protected Charset responseCharset = Charset.defaultCharset();
+		protected final List<HttpResponseCode> acceptableResponseCodes = new ArrayList<>(List.of(HttpResponseCode.HTTP_OK));
+		protected RequestMethod requestMethod = RequestMethod.GET;
 
         private ConnectionBuilder() {}
 

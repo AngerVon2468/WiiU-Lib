@@ -10,8 +10,8 @@ public class PersistentServerConnection extends PersistentConnection {
 	protected final ObjectHolder<ServerSocket> serverSocket = new ObjectHolder<>();
 	protected final ObjectHolder<Socket> clientSocket = new ObjectHolder<>();
 
-	public PersistentServerConnection(int port) {
-		super(port);
+	public PersistentServerConnection(PersistentConnectionBuilder builder) {
+		super(builder);
 	}
 
 	@Override
