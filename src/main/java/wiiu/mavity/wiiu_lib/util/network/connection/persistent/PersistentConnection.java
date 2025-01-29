@@ -1,5 +1,7 @@
 package wiiu.mavity.wiiu_lib.util.network.connection.persistent;
 
+import com.google.gson.*;
+
 import wiiu.mavity.wiiu_lib.util.ObjectHolder;
 import wiiu.mavity.wiiu_lib.util.network.*;
 import wiiu.mavity.wiiu_lib.util.network.connection.Connection;
@@ -7,18 +9,24 @@ import wiiu.mavity.wiiu_lib.util.network.connection.Connection;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
+import java.util.function.Function;
 
+@SuppressWarnings("UnusedReturnValue")
 public class PersistentConnection extends Connection {
 
 	protected final ObjectHolder<Socket> socket = new ObjectHolder<>();
 	protected final ObjectHolder<PrintWriter> out = new ObjectHolder<>();
 	protected final ObjectHolder<BufferedReader> in = new ObjectHolder<>();
 	protected final int port;
-	private final InputStream userIn;
-	private final OutputStream userOut;
-	private final boolean autoFlushConnectionWriter;
-	private final boolean autoFlushOutputWriter;
-	private final String closeConnectionString;
+	protected final InputStream userIn;
+	protected final OutputStream userOut;
+	protected final boolean autoFlushConnectionWriter;
+	protected final boolean autoFlushOutputWriter;
+	protected final String closeConnectionString;
+	protected final Function<String, String> userToConnectionModifier;
+	protected final Function<String, String> connectionToUserModifier;
+	protected final Gson gson;
+	protected final Class<?> jsonReturnType;
 
 	protected PersistentConnection(PersistentConnectionBuilder builder) {
 		super(
@@ -31,6 +39,10 @@ public class PersistentConnection extends Connection {
 		this.autoFlushConnectionWriter = builder.autoFlushConnectionWriter;
 		this.autoFlushOutputWriter = builder.autoFlushOutputWriter;
 		this.closeConnectionString = builder.closeConnectionString;
+		this.userToConnectionModifier = builder.userToConnectionModifier;
+		this.connectionToUserModifier = builder.connectionToUserModifier;
+		this.gson = builder.gson;
+		this.jsonReturnType = builder.jsonReturnType;
 	}
 
 	public InputStream getUserIn() {
@@ -53,6 +65,22 @@ public class PersistentConnection extends Connection {
 		return this.closeConnectionString;
 	}
 
+	public Function<String, String> getUserToConnectionModifier() {
+		return this.userToConnectionModifier;
+	}
+
+	public Function<String, String> getConnectionToUserModifier() {
+		return this.connectionToUserModifier;
+	}
+
+	public Gson getGson() {
+		return this.gson;
+	}
+
+	public Class<?> getJsonReturnType() {
+		return this.jsonReturnType;
+	}
+
 	@Override
 	public boolean isOpen() {
 		return this.in.isPresent() && this.out.isPresent() && super.isOpen();
@@ -69,7 +97,6 @@ public class PersistentConnection extends Connection {
 		this.scanInAndPost(scanner, writer);
 	}
 
-	// TODO: add two Function<String, String> modifiers, one to transform input from scanner into what is printed to connection, and one to transform what is received from connection into output
 	public void scanInAndPost(Scanner scanner, PrintWriter writer) {
 		this.checkOpen();
 		String scannerLine;
@@ -78,7 +105,13 @@ public class PersistentConnection extends Connection {
 			this.close();
 			return;
 		}
-		writer.println(this.sendAndAwaitResponse(scannerLine));
+		writer.println(
+			this.getConnectionToUserModifier().apply(
+				this.sendAndAwaitResponse(
+					this.getUserToConnectionModifier().apply(scannerLine)
+				)
+			)
+		);
 		if (!this.doAutoFlushConnectionWriter()) this.flushOut();
 		if (!this.doAutoFlushOutputWriter()) writer.flush();
 		this.scanInAndPost(scanner, writer);
@@ -89,13 +122,32 @@ public class PersistentConnection extends Connection {
 		this.out.getOrThrow().flush();
 	}
 
-	public String sendAndAwaitResponse(String message) {
+	public Object sendAndAwaitResponseObj(Object msg) {
+		return this.sendAndAwaitResponse0(msg, this.getJsonReturnType());
+	}
+
+	public <T> T sendAndAwaitResponse0(Object message, Class<T> returnType) {
 		this.send(message);
-		return this.awaitResponse();
+		String response = this.awaitResponse();
+		return this.getGson().fromJson(response, returnType);
+	}
+
+	public String sendAndAwaitResponse(String msg) {
+		return this.sendAndAwaitResponse0(msg, String.class);
+	}
+
+	public void send(Object msg) {
+		this.post(msg);
 	}
 
 	public void send(String msg) {
 		this.post(msg);
+	}
+
+	public void post(Object msg) {
+		if (msg == null) return;
+		if (msg instanceof String) this.post((String) msg);
+		else this.post(this.getGson().toJson(msg));
 	}
 
 	@Override
@@ -192,6 +244,10 @@ public class PersistentConnection extends Connection {
 		protected boolean autoFlushConnectionWriter = true;
 		protected boolean autoFlushOutputWriter = true;
 		protected String closeConnectionString = "stop";
+		protected Function<String, String> userToConnectionModifier = Function.identity();
+		protected Function<String, String> connectionToUserModifier = Function.identity();
+		protected Gson gson;
+		protected Class<?> jsonReturnType = String.class;
 
 		private PersistentConnectionBuilder() {}
 
@@ -266,6 +322,32 @@ public class PersistentConnection extends Connection {
 
 		public PersistentConnectionBuilder setTargetIp(String ip) {
 			this.targetIp = ip;
+			return this;
+		}
+
+		public PersistentConnectionBuilder setUserToConnectionModifier(Function<String, String> userToConnectionModifier) {
+			this.userToConnectionModifier = userToConnectionModifier;
+			return this;
+		}
+
+		public PersistentConnectionBuilder setConnectionToUserModifier(Function<String, String> connectionToUserModifier) {
+			this.connectionToUserModifier = connectionToUserModifier;
+			return this;
+		}
+
+		public PersistentConnectionBuilder enableJson() {
+			return this.enableJson(new GsonBuilder().disableHtmlEscaping());
+		}
+
+		public PersistentConnectionBuilder enableJson(GsonBuilder builder) {
+			this.gson = builder.create();
+			this.setUserToConnectionModifier(this.gson::toJson);
+			this.setConnectionToUserModifier((json) -> this.gson.fromJson(json, String.class));
+			return this;
+		}
+
+		public PersistentConnectionBuilder setGson(Gson gson) {
+			this.gson = gson;
 			return this;
 		}
 
