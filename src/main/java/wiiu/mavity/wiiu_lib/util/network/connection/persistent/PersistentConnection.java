@@ -2,16 +2,18 @@ package wiiu.mavity.wiiu_lib.util.network.connection.persistent;
 
 import com.google.gson.*;
 
-import wiiu.mavity.wiiu_lib.util.ObjectHolder;
+import org.jetbrains.annotations.ApiStatus.Internal;
+
+import wiiu.mavity.wiiu_lib.util.*;
 import wiiu.mavity.wiiu_lib.util.network.*;
 import wiiu.mavity.wiiu_lib.util.network.connection.Connection;
 
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
-import java.util.function.Function;
+import java.util.function.*;
 
-@SuppressWarnings("UnusedReturnValue")
+@SuppressWarnings({"UnusedReturnValue", "unchecked"})
 public class PersistentConnection extends Connection {
 
 	protected final ObjectHolder<Socket> socket = new ObjectHolder<>();
@@ -25,6 +27,8 @@ public class PersistentConnection extends Connection {
 	protected final String closeConnectionString;
 	protected final Function<String, String> userToConnectionModifier;
 	protected final Function<String, String> connectionToUserModifier;
+	protected final BiFunction<Object, PersistentConnection, String> userToConnectionModifierJson;
+	protected final TriFunction<String, PersistentConnection, ?, ?> connectionToUserModifierJson;
 	protected final Gson gson;
 	protected final Class<?> jsonReturnType;
 
@@ -43,6 +47,8 @@ public class PersistentConnection extends Connection {
 		this.connectionToUserModifier = builder.connectionToUserModifier;
 		this.gson = builder.gson;
 		this.jsonReturnType = builder.jsonReturnType;
+		this.userToConnectionModifierJson = builder.userToConnectionModifierJson;
+		this.connectionToUserModifierJson = builder.connectionToUserModifierJson;
 	}
 
 	public InputStream getUserIn() {
@@ -79,6 +85,14 @@ public class PersistentConnection extends Connection {
 
 	public Class<?> getJsonReturnType() {
 		return this.jsonReturnType;
+	}
+
+	public BiFunction<Object, PersistentConnection, String> getUserToConnectionModifierJson() {
+		return this.userToConnectionModifierJson;
+	}
+
+	public <R> BiFunction<String, Class<R>, R> getConnectionToUserModifierJson() {
+		return (BiFunction<String, Class<R>, R>) this.connectionToUserModifierJson;
 	}
 
 	@Override
@@ -128,8 +142,7 @@ public class PersistentConnection extends Connection {
 
 	public <T> T sendAndAwaitResponse0(Object message, Class<T> returnType) {
 		this.send(message);
-		String response = this.awaitResponse();
-		return this.getGson().fromJson(response, returnType);
+		return (T) this.getConnectionToUserModifierJson().apply(this.awaitResponse(), (Class<Object>) returnType);
 	}
 
 	public String sendAndAwaitResponse(String msg) {
@@ -146,12 +159,16 @@ public class PersistentConnection extends Connection {
 
 	public void post(Object msg) {
 		if (msg == null) return;
-		if (msg instanceof String) this.post((String) msg);
-		else this.post(this.getGson().toJson(msg));
+		this.post0(this.getUserToConnectionModifierJson().apply(msg, this));
 	}
 
 	@Override
-	public void post(String toPost) {
+	public void post(String msg) {
+		this.post((Object)msg);
+	}
+
+	@Internal
+	private void post0(String toPost) {
 		this.checkOpen();
 		try {
 			this.out.getOrThrow().println(toPost);
@@ -246,8 +263,18 @@ public class PersistentConnection extends Connection {
 		protected String closeConnectionString = "stop";
 		protected Function<String, String> userToConnectionModifier = Function.identity();
 		protected Function<String, String> connectionToUserModifier = Function.identity();
-		protected Gson gson;
+		protected BiFunction<Object, PersistentConnection, String> userToConnectionModifierJson = this.toJson();
+		protected TriFunction<String, PersistentConnection, Class<?>, ?> connectionToUserModifierJson = this.fromJson();
+		protected Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 		protected Class<?> jsonReturnType = String.class;
+
+		private BiFunction<Object, PersistentConnection, String> toJson() {
+			return (object, connection) -> connection.getGson().toJson(object);
+		}
+
+		private TriFunction<String, PersistentConnection, Class<?>, ?> fromJson() {
+			return (json, connection, clazz) -> connection.getGson().fromJson(json, clazz);
+		}
 
 		private PersistentConnectionBuilder() {}
 
@@ -335,14 +362,8 @@ public class PersistentConnection extends Connection {
 			return this;
 		}
 
-		public PersistentConnectionBuilder enableJson() {
-			return this.enableJson(new GsonBuilder().disableHtmlEscaping());
-		}
-
-		public PersistentConnectionBuilder enableJson(GsonBuilder builder) {
+		public PersistentConnectionBuilder setGson(GsonBuilder builder) {
 			this.gson = builder.create();
-			this.setUserToConnectionModifier(this.gson::toJson);
-			this.setConnectionToUserModifier((json) -> this.gson.fromJson(json, String.class));
 			return this;
 		}
 
