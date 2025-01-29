@@ -91,8 +91,8 @@ public class PersistentConnection extends Connection {
 		return this.userToConnectionModifierJson;
 	}
 
-	public <R> BiFunction<String, Class<R>, R> getConnectionToUserModifierJson() {
-		return (BiFunction<String, Class<R>, R>) this.connectionToUserModifierJson;
+	public <R> TriFunction<String, PersistentConnection, Class<R>, R> getConnectionToUserModifierJson() {
+		return (TriFunction<String, PersistentConnection, Class<R>, R>) this.connectionToUserModifierJson;
 	}
 
 	@Override
@@ -142,7 +142,7 @@ public class PersistentConnection extends Connection {
 
 	public <T> T sendAndAwaitResponse0(Object message, Class<T> returnType) {
 		this.send(message);
-		return (T) this.getConnectionToUserModifierJson().apply(this.awaitResponse(), (Class<Object>) returnType);
+		return (T) this.getConnectionToUserModifierJson().apply(this.awaitResponse(), this, (Class<Object>) returnType);
 	}
 
 	public String sendAndAwaitResponse(String msg) {
@@ -369,6 +369,21 @@ public class PersistentConnection extends Connection {
 
 		public PersistentConnectionBuilder setGson(Gson gson) {
 			this.gson = gson;
+			return this;
+		}
+
+		public PersistentConnectionBuilder setJsonReturnType(Class<?> jsonReturnType) {
+			this.jsonReturnType = jsonReturnType;
+			return this;
+		}
+
+		public PersistentConnectionBuilder setUserToConnectionModifierJson(BiFunction<Object, PersistentConnection, String> userToConnectionModifierJson) {
+			this.userToConnectionModifierJson = userToConnectionModifierJson;
+			return this;
+		}
+
+		public PersistentConnectionBuilder setConnectionToUserModifierJson(TriFunction<String, PersistentConnection, Class<?>, ?> connectionToUserModifierJson) {
+			this.connectionToUserModifierJson = connectionToUserModifierJson;
 			return this;
 		}
 
