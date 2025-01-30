@@ -1,24 +1,27 @@
-package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.thread.server;
+package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.client.thread;
 
 import wiiu.mavity.wiiu_lib.util.network.connection.persistent.*;
 
-public class ServerConnectionThread extends Thread {
+public class ClientConnectionThread extends Thread {
 
-	protected volatile PersistentServerConnection connection;
+	protected volatile PersistentClientConnection connection;
+	protected volatile String ip;
 	protected volatile int port;
-	protected volatile ServerThreadHandlerThread threadManager;
+	protected volatile ClientThreadHandlerThread threadManager;
 
-	public ServerConnectionThread(ServerThreadHandlerThread threadManager, int port) {
+	public ClientConnectionThread(ClientThreadHandlerThread threadManager, String ip, int port) {
 		super("ServerConnectionThread-" + System.currentTimeMillis());
 		this.threadManager = threadManager;
+		this.ip = ip;
 		this.port = port;
 	}
 
 	@Override
 	public synchronized void run() {
 		this.connection = PersistentConnection.PersistentConnectionBuilder.create()
+			.setTargetIp(this.ip)
 			.setPort(this.port)
-			.buildServer()
+			.buildClient()
 			.open();
 		this.connection.scanInAndWriteResponseToOut();
 		this.threadManager.threads.remove(this.getName());

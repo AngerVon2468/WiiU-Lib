@@ -1,9 +1,9 @@
-package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.thread.server;
+package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.server.thread;
 
 import wiiu.mavity.wiiu_lib.util.network.NetworkException;
-import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.Server;
+import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.server.Server;
 
-import java.util.*;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerThreadHandlerThread extends Thread {

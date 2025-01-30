@@ -1,5 +1,6 @@
 package wiiu.mavity.wiiu_lib.util.network.connection;
 
+import wiiu.mavity.wiiu_lib.OpenableAutoCloseable;
 import wiiu.mavity.wiiu_lib.util.ObjectHolder;
 import wiiu.mavity.wiiu_lib.util.network.*;
 
@@ -9,7 +10,7 @@ import java.nio.charset.Charset;
 import java.util.*;
 
 @SuppressWarnings("UnusedReturnValue")
-public class Connection implements AutoCloseable {
+public class Connection implements OpenableAutoCloseable<Connection> {
 
     protected final ObjectHolder<HttpURLConnection> connection = new ObjectHolder<>();
     protected final ObjectHolder<String> response = new ObjectHolder<>();
