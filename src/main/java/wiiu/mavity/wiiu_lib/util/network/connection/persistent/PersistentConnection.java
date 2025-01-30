@@ -25,7 +25,7 @@ public class PersistentConnection extends Connection {
 	protected final boolean autoFlushConnectionWriter;
 	protected final boolean autoFlushOutputWriter;
 	protected final String closeConnectionString;
-	protected final Function<String, String> userToConnectionModifier;
+	protected final Function<Object, Object> userToConnectionModifier;
 	protected final Function<String, String> connectionToUserModifier;
 	protected final BiFunction<Object, PersistentConnection, String> userToConnectionModifierJson;
 	protected final TriFunction<String, PersistentConnection, ?, ?> connectionToUserModifierJson;
@@ -71,7 +71,7 @@ public class PersistentConnection extends Connection {
 		return this.closeConnectionString;
 	}
 
-	public Function<String, String> getUserToConnectionModifier() {
+	public Function<Object, Object> getUserToConnectionModifier() {
 		return this.userToConnectionModifier;
 	}
 
@@ -112,46 +112,47 @@ public class PersistentConnection extends Connection {
 		this.checkOpen();
 		BufferedReader userInputReader = new BufferedReader(new InputStreamReader(this.getUserIn()));
 		PrintWriter userOutputWriter = new PrintWriter(this.getUserOut(), this.doAutoFlushOutputWriter());
-		try {
-			this.scanInAndPost(userInputReader, userOutputWriter);
-		} catch (IOException e) {
-			throw new NetworkException(this.getUrl(), e);
-		}
+		this.scanInAndPost(userInputReader, userOutputWriter);
 	}
 
-	public void scanInAndPost(BufferedReader userInputReader, PrintWriter userOutputWriter) throws IOException {
+	public void scanInAndPost(BufferedReader userInputReader, PrintWriter userOutputWriter) {
 		String closeConnection = this.getCloseConnectionString();
 
 		this.checkOpen();
 
-		do {
+		try {
 
-			Pair<Boolean, String> hasPendingInput = this.hasPendingInput();
-			if (hasPendingInput.getA()) {
-				String input = hasPendingInput.getB();
-				if (input.trim().equals(closeConnection)) {
-					this.close();
-					break;
-				}
-				if (!input.equals("null")) {
-					userOutputWriter.println(input);
-					if (!this.doAutoFlushOutputWriter()) userOutputWriter.flush();
-				}
-			}
+			do {
 
-			if (userInputReader.ready()) { // ready = has input (to prevent blocking)
-				String userInput = userInputReader.readLine();
-				if (userInput.trim().equals(closeConnection)) {
-					this.post(closeConnection);
-					this.close();
-					break;
+				Pair<Boolean, String> hasPendingInput = this.hasPendingInput();
+				if (hasPendingInput.getA()) {
+					String input = hasPendingInput.getB();
+					if (input.trim().equals(closeConnection)) {
+						this.close();
+						break;
+					}
+					if (!input.equals("null")) {
+						userOutputWriter.println(input);
+						if (!this.doAutoFlushOutputWriter()) userOutputWriter.flush();
+					}
 				}
-				String toSend = this.getUserToConnectionModifier().apply(userInput);
-				this.post(toSend);
-				if (!this.doAutoFlushConnectionWriter()) this.flushOut();
-			}
 
-		} while (true);
+				if (userInputReader.ready()) { // ready = has input (to prevent blocking)
+					String userInput = userInputReader.readLine();
+					if (userInput.trim().equals(closeConnection)) {
+						this.post(closeConnection);
+						this.close();
+						break;
+					}
+					this.post(userInput);
+					if (!this.doAutoFlushConnectionWriter()) this.flushOut();
+				}
+
+			} while (true);
+
+		} catch (Exception e) {
+			throw new NetworkException(this.getUrl(), e);
+		}
 	}
 
 	public void flushOut() {
@@ -180,14 +181,26 @@ public class PersistentConnection extends Connection {
 		this.post(msg);
 	}
 
-	public void post(Object msg) {
-		if (msg == null) return;
-		this.postJson(this.getUserToConnectionModifierJson().apply(msg, this));
+	public void sendWithoutModifier(Object msg) {
+		this.postWithoutModifier(msg);
+	}
+
+	public void postWithoutModifier(Object msg) {
+		this.post0(msg, false);
 	}
 
 	@Override
 	public void post(String msg) {
 		this.post((Object)msg);
+	}
+
+	public void post(Object msg) {
+		this.post0(msg, true);
+	}
+
+	public void post0(Object msg, boolean modify) {
+		if (modify) msg = this.getUserToConnectionModifier().apply(msg);
+		this.postJson(this.getUserToConnectionModifierJson().apply(msg, this));
 	}
 
 	@Internal
@@ -215,6 +228,11 @@ public class PersistentConnection extends Connection {
 
 	@Override
 	public String getResponse() {
+		this.checkOpen();
+		return this.getConnectionToUserModifier().apply(this.getUnmodifiedResponse());
+	}
+
+	public String getUnmodifiedResponse() {
 		this.checkOpen();
 		String response = String.valueOf(this.getJsonResponse());
 		return response.equals("null") ? response : this.applyConnectionToUserModifierJson(response, this, String.class);
@@ -297,7 +315,7 @@ public class PersistentConnection extends Connection {
 		protected boolean autoFlushConnectionWriter = true;
 		protected boolean autoFlushOutputWriter = true;
 		protected String closeConnectionString = "stop";
-		protected Function<String, String> userToConnectionModifier = Function.identity();
+		protected Function<Object, Object> userToConnectionModifier = Function.identity();
 		protected Function<String, String> connectionToUserModifier = Function.identity();
 		protected BiFunction<Object, PersistentConnection, String> userToConnectionModifierJson = this.toJson();
 		protected TriFunction<String, PersistentConnection, Class<?>, ?> connectionToUserModifierJson = this.fromJson();
@@ -388,7 +406,7 @@ public class PersistentConnection extends Connection {
 			return this;
 		}
 
-		public PersistentConnectionBuilder setUserToConnectionModifier(Function<String, String> userToConnectionModifier) {
+		public PersistentConnectionBuilder setUserToConnectionModifier(Function<Object, Object> userToConnectionModifier) {
 			this.userToConnectionModifier = userToConnectionModifier;
 			return this;
 		}
