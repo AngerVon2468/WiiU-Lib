@@ -95,6 +95,10 @@ public class PersistentConnection extends Connection {
 		return (TriFunction<String, PersistentConnection, Class<R>, R>) this.connectionToUserModifierJson;
 	}
 
+	public <R> R applyConnectionToUserModifierJson(String msg, PersistentConnection connection, Class<R> returnType) {
+		return (R) this.getConnectionToUserModifierJson().apply(msg, connection, (Class<Object>) returnType);
+	}
+
 	@Override
 	public boolean isOpen() {
 		return this.in.isPresent() && this.out.isPresent() && super.isOpen();
@@ -142,7 +146,7 @@ public class PersistentConnection extends Connection {
 
 	public <T> T sendAndAwaitResponse0(Object message, Class<T> returnType) {
 		this.send(message);
-		return (T) this.getConnectionToUserModifierJson().apply(this.awaitResponse(), this, (Class<Object>) returnType);
+		return this.applyConnectionToUserModifierJson(this.awaitResponse(), this, returnType);
 	}
 
 	public String sendAndAwaitResponse(String msg) {
@@ -387,6 +391,7 @@ public class PersistentConnection extends Connection {
 			return this;
 		}
 
+		@Internal
 		private PersistentConnection build() {
 			return new PersistentConnection(this);
 		}
