@@ -14,7 +14,7 @@ import java.net.*;
 import java.util.function.*;
 
 @SuppressWarnings({"UnusedReturnValue", "unchecked"})
-public class PersistentConnection extends Connection {
+public abstract class PersistentConnection extends Connection {
 
 	protected final ObjectHolder<Socket> socket = new ObjectHolder<>();
 	protected final ObjectHolder<PrintWriter> out = new ObjectHolder<>();
@@ -309,9 +309,9 @@ public class PersistentConnection extends Connection {
 
 		protected URL url = NetworkUtil.url("https://www.example.com");
 		protected String targetIp = "127.0.0.1";
-		protected int port = 6666;
-		protected InputStream in;
-		protected OutputStream out;
+		protected int port = 1984;
+		protected InputStream in = System.in;
+		protected OutputStream out = System.out;
 		protected boolean autoFlushConnectionWriter = true;
 		protected boolean autoFlushOutputWriter = true;
 		protected String closeConnectionString = "stop";
@@ -439,11 +439,6 @@ public class PersistentConnection extends Connection {
 		public PersistentConnectionBuilder setConnectionToUserModifierJson(TriFunction<String, PersistentConnection, Class<?>, ?> connectionToUserModifierJson) {
 			this.connectionToUserModifierJson = connectionToUserModifierJson;
 			return this;
-		}
-
-		@Internal
-		private PersistentConnection build() {
-			return new PersistentConnection(this);
 		}
 
 		public PersistentServerConnection buildServer() {
