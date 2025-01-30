@@ -124,37 +124,34 @@ public class PersistentConnection extends Connection {
 
 		this.checkOpen();
 
-		System.out.println("Awaiting connection input...");
-		Pair<Boolean, String> hasPendingInput = this.hasPendingInput();
-		if (hasPendingInput.getA()) {
-			String input = hasPendingInput.getB();
-			if (input.trim().equals(closeConnection)) {
-				this.close();
-				return;
-			}
-			System.out.println("Connection input text: '" + input + "'");
-			userOutputWriter.println(input);
-			if (!this.doAutoFlushOutputWriter()) userOutputWriter.flush();
-		} else System.out.println("No connection input found.");
+		do {
 
-		System.out.println("Awaiting user input...");
-		boolean hasUserInput = userInputReader.ready();
-		if (hasUserInput) {
-			String userInput = userInputReader.readLine();
-			if (userInput.trim().equals(closeConnection)) {
-				this.post(closeConnection);
-				this.close();
-				return;
+			Pair<Boolean, String> hasPendingInput = this.hasPendingInput();
+			if (hasPendingInput.getA()) {
+				String input = hasPendingInput.getB();
+				if (input.trim().equals(closeConnection)) {
+					this.close();
+					break;
+				}
+				if (!input.equals("null")) {
+					userOutputWriter.println(input);
+					if (!this.doAutoFlushOutputWriter()) userOutputWriter.flush();
+				}
 			}
-			System.out.println("User input text: '" + userInput + "'");
-			String toSend = this.getUserToConnectionModifier().apply(userInput);
-			System.out.println("User input text as json: '" + toSend + "'");
-			this.post(toSend);
-			if (!this.doAutoFlushConnectionWriter()) this.flushOut();
-		} else System.out.println("No user input found. Moving to connection input.");
 
-		System.out.println("Restarting process.");
-		this.scanInAndPost(userInputReader, userOutputWriter);
+			if (userInputReader.ready()) { // ready = has input (to prevent blocking)
+				String userInput = userInputReader.readLine();
+				if (userInput.trim().equals(closeConnection)) {
+					this.post(closeConnection);
+					this.close();
+					break;
+				}
+				String toSend = this.getUserToConnectionModifier().apply(userInput);
+				this.post(toSend);
+				if (!this.doAutoFlushConnectionWriter()) this.flushOut();
+			}
+
+		} while (true);
 	}
 
 	public void flushOut() {
