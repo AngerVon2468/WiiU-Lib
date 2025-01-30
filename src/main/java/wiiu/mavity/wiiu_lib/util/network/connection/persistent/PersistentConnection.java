@@ -3,6 +3,7 @@ package wiiu.mavity.wiiu_lib.util.network.connection.persistent;
 import com.google.gson.*;
 
 import org.jetbrains.annotations.ApiStatus.Internal;
+import org.jetbrains.annotations.Nullable;
 
 import wiiu.mavity.wiiu_lib.util.*;
 import wiiu.mavity.wiiu_lib.util.network.*;
@@ -10,7 +11,6 @@ import wiiu.mavity.wiiu_lib.util.network.connection.Connection;
 
 import java.io.*;
 import java.net.*;
-import java.util.Scanner;
 import java.util.function.*;
 
 @SuppressWarnings({"UnusedReturnValue", "unchecked"})
@@ -110,29 +110,51 @@ public class PersistentConnection extends Connection {
 
 	public void scanInAndWriteResponseToOut() {
 		this.checkOpen();
-		Scanner scanner = new Scanner(this.getUserIn());
-		PrintWriter writer = new PrintWriter(this.getUserOut(), this.doAutoFlushOutputWriter());
-		this.scanInAndPost(scanner, writer);
+		BufferedReader userInputReader = new BufferedReader(new InputStreamReader(this.getUserIn()));
+		PrintWriter userOutputWriter = new PrintWriter(this.getUserOut(), this.doAutoFlushOutputWriter());
+		try {
+			this.scanInAndPost(userInputReader, userOutputWriter);
+		} catch (IOException e) {
+			throw new NetworkException(this.getUrl(), e);
+		}
 	}
 
-	public void scanInAndPost(Scanner scanner, PrintWriter writer) {
+	public void scanInAndPost(BufferedReader userInputReader, PrintWriter userOutputWriter) throws IOException {
+		String closeConnection = this.getCloseConnectionString();
+
 		this.checkOpen();
-		String scannerLine;
-		do scannerLine = scanner.nextLine(); while (scannerLine == null);
-		if (scannerLine.trim().equals(this.getCloseConnectionString())) {
-			this.close();
-			return;
-		}
-		writer.println(
-			this.getConnectionToUserModifier().apply(
-				this.sendAndAwaitResponse(
-					this.getUserToConnectionModifier().apply(scannerLine)
-				)
-			)
-		);
-		if (!this.doAutoFlushConnectionWriter()) this.flushOut();
-		if (!this.doAutoFlushOutputWriter()) writer.flush();
-		this.scanInAndPost(scanner, writer);
+
+		System.out.println("Awaiting connection input...");
+		Pair<Boolean, String> hasPendingInput = this.hasPendingInput();
+		if (hasPendingInput.getA()) {
+			String input = hasPendingInput.getB();
+			if (input.trim().equals(closeConnection)) {
+				this.close();
+				return;
+			}
+			System.out.println("Connection input text: '" + input + "'");
+			userOutputWriter.println(input);
+			if (!this.doAutoFlushOutputWriter()) userOutputWriter.flush();
+		} else System.out.println("No connection input found.");
+
+		System.out.println("Awaiting user input...");
+		boolean hasUserInput = userInputReader.ready();
+		if (hasUserInput) {
+			String userInput = userInputReader.readLine();
+			if (userInput.trim().equals(closeConnection)) {
+				this.post(closeConnection);
+				this.close();
+				return;
+			}
+			System.out.println("User input text: '" + userInput + "'");
+			String toSend = this.getUserToConnectionModifier().apply(userInput);
+			System.out.println("User input text as json: '" + toSend + "'");
+			this.post(toSend);
+			if (!this.doAutoFlushConnectionWriter()) this.flushOut();
+		} else System.out.println("No user input found. Moving to connection input.");
+
+		System.out.println("Restarting process.");
+		this.scanInAndPost(userInputReader, userOutputWriter);
 	}
 
 	public void flushOut() {
@@ -163,7 +185,7 @@ public class PersistentConnection extends Connection {
 
 	public void post(Object msg) {
 		if (msg == null) return;
-		this.post0(this.getUserToConnectionModifierJson().apply(msg, this));
+		this.postJson(this.getUserToConnectionModifierJson().apply(msg, this));
 	}
 
 	@Override
@@ -172,27 +194,40 @@ public class PersistentConnection extends Connection {
 	}
 
 	@Internal
-	private void post0(String toPost) {
+	public void postJson(String json) {
 		this.checkOpen();
 		try {
-			this.out.getOrThrow().println(toPost);
+			this.out.getOrThrow().println(json);
 		} catch (Exception e) {
 			throw new NetworkException(this.getUrl(), e);
 		}
 	}
 
+	public Pair<Boolean, String> hasPendingInput() {
+		this.checkOpen();
+		@Nullable String response = this.getResponse();
+		return Pair.of(response != null, response);
+	}
+
 	public String awaitResponse() {
 		this.checkOpen();
 		String response;
-		do response = this.getResponse(); while (response == null);
+		do response = this.getResponse(); while (response.equals("null"));
 		return response;
 	}
 
 	@Override
 	public String getResponse() {
 		this.checkOpen();
+		String response = String.valueOf(this.getJsonResponse());
+		return response.equals("null") ? response : this.applyConnectionToUserModifierJson(response, this, String.class);
+	}
+
+	public @Nullable String getJsonResponse() {
+		this.checkOpen();
 		try {
-			return this.in.getOrThrow().readLine();
+			var in = this.in.getOrThrow();
+			return in.ready() ? in.readLine() : null;
 		} catch (Exception e) {
 			throw new NetworkException(this.getUrl(), e);
 		}
