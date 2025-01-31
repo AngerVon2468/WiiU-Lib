@@ -1,4 +1,4 @@
-package wiiu.mavity.wiiu_lib;
+package wiiu.mavity.wiiu_lib.util.process;
 
 public interface OpenableAutoCloseable<SELF extends OpenableAutoCloseable<SELF>> extends AutoCloseable {
 

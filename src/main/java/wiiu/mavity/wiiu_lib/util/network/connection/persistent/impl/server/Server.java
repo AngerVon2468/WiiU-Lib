@@ -1,39 +1,35 @@
 package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.server;
 
-import wiiu.mavity.wiiu_lib.OpenableAutoCloseable;
-import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.server.thread.ServerThreadHandlerThread;
+import wiiu.mavity.wiiu_lib.util.process.threaded.LoopableMultiThreadedProcess;
+import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.server.thread.*;
 
-public abstract class Server implements OpenableAutoCloseable<Server> {
+public class Server extends LoopableMultiThreadedProcess {
 
-	public volatile ServerThreadHandlerThread thread;
-	public volatile boolean shouldClose = false;
-
-	public Server() {
-		this.thread = new ServerThreadHandlerThread(this);
+	@Override
+	public synchronized void createResources() {
+		this.threadManager = new ServerThreadHandlerThread(this, true);
 	}
 
-	public synchronized void loop() {
-		do this.loop0(); while (!this.shouldClose);
-	}
-
-	protected synchronized void loop0() {}
-
+	@Override
 	public synchronized Server open() {
-		this.thread.start();
+		super.open();
 		return this;
 	}
 
 	@Override
 	public synchronized void close() {
-		if (!this.shouldClose) this.shouldClose = true;
-		if (this.thread.getState().equals(Thread.State.RUNNABLE)) this.thread.stop();
+		super.close();
+	}
+
+	public synchronized void addThread(int port) {
+		this.addThread(new ServerConnectionThread(this.threadManager, port));
 	}
 
 	public static void main(String[] args) {
-		try (Server server = new Server() {}) {
+		try (Server server = new Server()) {
+			server.createResources();
+			server.addThread(1984);
 			server.open();
-			server.thread.addThread(6666);
-			server.thread.addThread(1984);
 			server.loop();
 		}
 	}

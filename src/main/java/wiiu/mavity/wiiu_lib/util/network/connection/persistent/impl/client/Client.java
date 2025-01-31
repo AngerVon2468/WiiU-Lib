@@ -1,37 +1,35 @@
 package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.client;
 
-import wiiu.mavity.wiiu_lib.OpenableAutoCloseable;
-import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.client.thread.ClientThreadHandlerThread;
+import wiiu.mavity.wiiu_lib.util.process.threaded.LoopableMultiThreadedProcess;
+import wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.client.thread.*;
 
-public class Client implements OpenableAutoCloseable<Client> {
+public class Client extends LoopableMultiThreadedProcess {
 
-	public volatile ClientThreadHandlerThread thread;
-	public volatile boolean shouldClose = false;
-
-	public Client() {
-		this.thread = new ClientThreadHandlerThread(this);
+	@Override
+	public synchronized void createResources() {
+		this.threadManager = new ClientThreadHandlerThread(this, true);
 	}
 
-	public synchronized void loop() {
-		do this.loop0(); while (!this.shouldClose);
-	}
-
-	protected synchronized void loop0() {}
-
+	@Override
 	public synchronized Client open() {
-		this.thread.start();
+		super.open();
 		return this;
 	}
 
 	@Override
 	public synchronized void close() {
-		if (!this.shouldClose) this.shouldClose = true;
-		if (this.thread.getState().equals(Thread.State.RUNNABLE)) this.thread.stop();
+		super.close();
+	}
+
+	public synchronized void addThread(String ip, int port) {
+		this.addThread(new ClientConnectionThread(this.threadManager, ip, port));
 	}
 
 	public static void main(String[] args) {
-		try (Client client = new Client().open()) {
-			// don't commit ip
+		try (Client client = new Client()) {
+			client.createResources();
+			client.addThread("127.0.0.1", 1984);
+			client.open();
 			client.loop();
 		}
 	}

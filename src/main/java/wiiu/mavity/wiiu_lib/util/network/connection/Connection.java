@@ -1,6 +1,6 @@
 package wiiu.mavity.wiiu_lib.util.network.connection;
 
-import wiiu.mavity.wiiu_lib.OpenableAutoCloseable;
+import wiiu.mavity.wiiu_lib.util.process.OpenableAutoCloseable;
 import wiiu.mavity.wiiu_lib.util.ObjectHolder;
 import wiiu.mavity.wiiu_lib.util.network.*;
 
@@ -178,6 +178,7 @@ public class Connection implements OpenableAutoCloseable<Connection> {
         });
     }
 
+	@Override
     public Connection open() {
         try {
             this.connection.forceSet(this.getUrl().openConnection());
