@@ -6,7 +6,7 @@ import wiiu.mavity.wiiu_lib.util.process.threaded.LoopableMultiThreadedProcess;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
-public abstract class ThreadHandlerThread extends Thread {
+public abstract class ThreadManagerThread extends Thread {
 
 	@EffectivelyFinal
 	public volatile ConcurrentHashMap<String, Thread> threads = new ConcurrentHashMap<>();
@@ -18,14 +18,14 @@ public abstract class ThreadHandlerThread extends Thread {
 	@EffectivelyFinal
 	public volatile boolean closeProcessOnShutdown;
 
-	public volatile Predicate<ThreadHandlerThread> runningPredicate = thread -> !thread.threads.isEmpty();
+	public volatile Predicate<ThreadManagerThread> runningPredicate = thread -> !thread.threads.isEmpty();
 
-	public final synchronized void setPredicate(Predicate<ThreadHandlerThread> predicate) {
+	public final synchronized void setPredicate(Predicate<ThreadManagerThread> predicate) {
 		this.runningPredicate = predicate;
 	}
 
-	public ThreadHandlerThread(LoopableMultiThreadedProcess process, String name, boolean closeProcessOnShutdown) {
-		super("ThreadHandlerThread-" + name.trim());
+	public ThreadManagerThread(LoopableMultiThreadedProcess process, String name, boolean closeProcessOnShutdown) {
+		super("ThreadManagerThread-" + name.trim());
 		this.process = process;
 		this.name = name;
 		this.closeProcessOnShutdown = closeProcessOnShutdown;
@@ -49,7 +49,6 @@ public abstract class ThreadHandlerThread extends Thread {
 	}
 
 	public synchronized <T extends Thread> void addThread(T thread) {
-		thread.setName(thread.getName() + "-" + this.threads.size() + 1);
 		this.addThread(thread.getName(), thread);
 	}
 

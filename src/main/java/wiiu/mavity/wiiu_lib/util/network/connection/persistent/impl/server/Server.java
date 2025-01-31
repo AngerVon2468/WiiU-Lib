@@ -7,7 +7,7 @@ public class Server extends LoopableMultiThreadedProcess {
 
 	@Override
 	public synchronized void createResources() {
-		this.threadManager = new ServerThreadHandlerThread(this, true);
+		this.threadManager = new ServerThreadManagerThread(this, true);
 	}
 
 	@Override

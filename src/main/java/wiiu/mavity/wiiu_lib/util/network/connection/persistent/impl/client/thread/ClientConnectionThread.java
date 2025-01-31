@@ -1,18 +1,16 @@
 package wiiu.mavity.wiiu_lib.util.network.connection.persistent.impl.client.thread;
 
 import wiiu.mavity.wiiu_lib.util.network.connection.persistent.*;
-import wiiu.mavity.wiiu_lib.util.process.threaded.thread.ThreadHandlerThread;
+import wiiu.mavity.wiiu_lib.util.process.threaded.thread.*;
 
-public class ClientConnectionThread extends Thread {
+public class ClientConnectionThread extends HandledThread {
 
 	protected volatile PersistentClientConnection connection;
 	protected volatile String ip;
 	protected volatile int port;
-	protected volatile ThreadHandlerThread threadManager;
 
-	public ClientConnectionThread(ThreadHandlerThread threadManager, String ip, int port) {
-		super("ServerConnectionThread");
-		this.threadManager = threadManager;
+	public ClientConnectionThread(ThreadManagerThread threadManager, String ip, int port) {
+		super(threadManager, "ClientConnectionThread");
 		this.ip = ip;
 		this.port = port;
 	}
@@ -25,6 +23,6 @@ public class ClientConnectionThread extends Thread {
 			.buildClient()
 			.open();
 		this.connection.scanInAndWriteResponseToOut();
-		this.threadManager.threads.remove(this.getName());
+		super.run();
 	}
 }

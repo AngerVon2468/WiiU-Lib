@@ -7,7 +7,7 @@ public class Client extends LoopableMultiThreadedProcess {
 
 	@Override
 	public synchronized void createResources() {
-		this.threadManager = new ClientThreadHandlerThread(this, true);
+		this.threadManager = new ClientThreadManagerThread(this, true);
 	}
 
 	@Override
