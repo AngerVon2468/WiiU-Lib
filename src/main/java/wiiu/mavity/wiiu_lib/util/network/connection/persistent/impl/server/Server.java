@@ -21,14 +21,14 @@ public class Server extends LoopableMultiThreadedProcess {
 		super.close();
 	}
 
-	public synchronized void addThread(int port) {
+	public synchronized void addConnectionThread(int port) {
 		this.addThread(new ServerConnectionThread(this.threadManager, port));
 	}
 
 	public static void main(String[] args) {
 		try (Server server = new Server()) {
 			server.createResources();
-			server.addThread(1984);
+			server.addConnectionThread(1984);
 			server.open();
 			server.loop();
 		}

@@ -18,10 +18,10 @@ public abstract class ThreadManagerThread extends Thread {
 	@EffectivelyFinal
 	public volatile boolean closeProcessOnShutdown;
 
-	public volatile Predicate<ThreadManagerThread> runningPredicate = thread -> !thread.threads.isEmpty();
+	public volatile Predicate<ThreadManagerThread> isRunningPredicate = thread -> !thread.threads.isEmpty();
 
-	public final synchronized void setPredicate(Predicate<ThreadManagerThread> predicate) {
-		this.runningPredicate = predicate;
+	public final synchronized void setRunningPredicate(Predicate<ThreadManagerThread> predicate) {
+		this.isRunningPredicate = predicate;
 	}
 
 	public ThreadManagerThread(LoopableMultiThreadedProcess process, String name, boolean closeProcessOnShutdown) {
@@ -41,7 +41,7 @@ public abstract class ThreadManagerThread extends Thread {
 	public synchronized void updateThreads() {
 		try {
 			for (Thread thread : this.threads.values()) if (thread.getState().equals(Thread.State.NEW)) thread.start();
-			if (!this.runningPredicate.test(this)) this.running = false;
+			if (!this.isRunningPredicate.test(this)) this.running = false;
 		} catch (Exception e) {
 			this.running = false;
 			throw new RuntimeException("An error occurred while updating threads!", e);

@@ -1,12 +1,13 @@
 package wiiu.mavity.wiiu_lib.util.process.threaded;
 
-import wiiu.mavity.wiiu_lib.annotation.EffectivelyFinal;
+import wiiu.mavity.wiiu_lib.annotation.*;
 import wiiu.mavity.wiiu_lib.util.process.LoopableProcess;
 import wiiu.mavity.wiiu_lib.util.process.threaded.thread.ThreadManagerThread;
 
 public abstract class LoopableMultiThreadedProcess extends LoopableProcess {
 
 	@EffectivelyFinal
+	@CreatedInResourceContainer
 	public volatile ThreadManagerThread threadManager;
 
 	@Override

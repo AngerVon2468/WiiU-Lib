@@ -1,11 +1,10 @@
 package wiiu.mavity.wiiu_lib.util.process.threaded.thread;
 
-import wiiu.mavity.wiiu_lib.annotation.*;
+import wiiu.mavity.wiiu_lib.annotation.EffectivelyFinal;
 
-public class HandledThread extends Thread {
+public abstract class HandledThread extends Thread {
 
 	@EffectivelyFinal
-	@CreatedInResourceContainer
 	public volatile ThreadManagerThread threadManager;
 
 	public HandledThread(ThreadManagerThread threadManager, String name) {

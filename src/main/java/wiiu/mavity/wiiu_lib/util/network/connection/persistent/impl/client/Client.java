@@ -21,14 +21,14 @@ public class Client extends LoopableMultiThreadedProcess {
 		super.close();
 	}
 
-	public synchronized void addThread(String ip, int port) {
+	public synchronized void addConnectionThread(String ip, int port) {
 		this.addThread(new ClientConnectionThread(this.threadManager, ip, port));
 	}
 
 	public static void main(String[] args) {
 		try (Client client = new Client()) {
 			client.createResources();
-			client.addThread("127.0.0.1", 1984);
+			client.addConnectionThread("127.0.0.1", 1984);
 			client.open();
 			client.loop();
 		}
