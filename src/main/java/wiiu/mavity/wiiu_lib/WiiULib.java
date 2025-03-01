@@ -1,6 +1,6 @@
 package wiiu.mavity.wiiu_lib;
 
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.fml.common.Mod;
 
 @Mod(WiiULib.MOD_ID)
 public class WiiULib {

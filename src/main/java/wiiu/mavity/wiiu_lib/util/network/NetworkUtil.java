@@ -2,7 +2,7 @@ package wiiu.mavity.wiiu_lib.util.network;
 
 import com.google.gson.*;
 
-import com.mojang.util.UUIDTypeAdapter;
+import com.mojang.util.UndashedUuid;
 
 import wiiu.mavity.wiiu_lib.util.network.connection.*;
 
@@ -12,7 +12,7 @@ import java.util.*;
 public class NetworkUtil {
 
 	public static String getUsernameFromUUID(UUID uuid) {
-		String content = requestResponseFromUrl("https://sessionserver.mojang.com/session/minecraft/profile/" + UUIDTypeAdapter.fromUUID(uuid));
+		String content = requestResponseFromUrl("https://sessionserver.mojang.com/session/minecraft/profile/" + UndashedUuid.toString(uuid));
 		JsonObject json = JsonParser.parseString(content).getAsJsonObject();
 		return json.get("name").getAsString();
 	}
